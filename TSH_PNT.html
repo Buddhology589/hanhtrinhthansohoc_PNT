@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hành Trình Thần Số Học: Phan Ngọc Thắng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony (Warm neutrals, soft terracotta, deep green, gentle blue) -->
+    <!-- Application Structure Plan: A dashboard-style SPA with a main navigation hub linking to four interactive sections: 'Energy Overview' (with cards and a radar chart), 'Birth Chart Map' (interactive grid), 'Life's Journey' (timeline and line chart), and 'Synthesis' (accordion text). This non-linear structure empowers the user to explore their numerological profile based on their curiosity, rather than following the report's linear text format. It transforms passive reading into active discovery, enhancing comprehension and engagement. -->
+    <!-- Visualization & Content Choices: 1. Core Numbers -> Goal: Inform/Compare -> Viz: Interactive Cards + Radar Chart -> Interaction: Click-to-reveal details -> Justification: Cards break down info, radar chart provides a holistic visual summary -> Library: Chart.js. 2. Birth Chart -> Goal: Organize/Inform -> Viz: Interactive HTML Grid -> Interaction: Hover/click for details, toggle to highlight 'Arrows' -> Justification: Direct manipulation of the chart is more engaging than a static image -> Library: Vanilla JS. 3. 4 Pinnacles -> Goal: Show Change -> Viz: Interactive Timeline + Line Chart -> Interaction: Click peak for details -> Justification: Timeline shows sequence, line chart visualizes the energetic shifts over a lifetime -> Library: Chart.js. 4. Synthesis -> Goal: Guide -> Viz: Accordion Text Blocks -> Interaction: Click-to-expand -> Justification: Prevents information overload from a large block of text -> Library: Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF5;
+            color: #3D405B;
+        }
+        .nav-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .nav-card.active {
+            border-color: #E07A5F;
+            background-color: #F9EAE4;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .birth-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            border: 2px solid #D6CCC2;
+            max-width: 300px;
+            aspect-ratio: 1/1;
+        }
+        .birth-chart-cell {
+            border: 1px solid #E3D5CA;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #3D405B;
+            position: relative;
+        }
+        .birth-chart-cell.highlight {
+            background-color: #F9EAE4;
+        }
+        .arrow-line {
+            position: absolute;
+            background-color: #E07A5F;
+            opacity: 0.7;
+            transform-origin: 0 0;
+            display: none;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-[#3D405B]">Hành Trình Thần Số Học</h1>
+            <p class="text-lg md:text-xl text-[#81B29A] mt-2">Phan Ngọc Thắng - 25/07/1994</p>
+        </header>
+
+        <nav id="main-nav" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div data-target="overview" class="nav-card active cursor-pointer p-4 border-2 border-transparent rounded-lg bg-white shadow-md text-center">
+                <div class="text-4xl mb-2">✨</div>
+                <h2 class="font-semibold">Tổng Quan Năng Lượng</h2>
+            </div>
+            <div data-target="birth-chart" class="nav-card cursor-pointer p-4 border-2 border-transparent rounded-lg bg-white shadow-md text-center">
+                <div class="text-4xl mb-2">🗺️</div>
+                <h2 class="font-semibold">Bản Đồ Ngày Sinh</h2>
+            </div>
+            <div data-target="journey" class="nav-card cursor-pointer p-4 border-2 border-transparent rounded-lg bg-white shadow-md text-center">
+                <div class="text-4xl mb-2">⛰️</div>
+                <h2 class="font-semibold">Hành Trình Cuộc Đời</h2>
+            </div>
+            <div data-target="synthesis" class="nav-card cursor-pointer p-4 border-2 border-transparent rounded-lg bg-white shadow-md text-center">
+                <div class="text-4xl mb-2">🧭</div>
+                <h2 class="font-semibold">Luận Giải & Gợi Ý</h2>
+            </div>
+        </nav>
+
+        <main>
+            <section id="overview" class="content-section active">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <p class="text-center mb-6 text-gray-600">Đây là bốn chỉ số cốt lõi tạo nên nền tảng năng lượng của anh. Chúng tương tác với nhau, tạo nên bản sắc và con đường phát triển độc đáo. Nhấp vào từng thẻ để khám phá sâu hơn.</p>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-2 gap-4" id="core-numbers-grid"></div>
+                        <div id="core-number-details" class="p-4 bg-[#FDFBF5] rounded-lg border border-gray-200 min-h-[200px]">
+                            <h3 class="font-bold text-lg text-[#E07A5F]"></h3>
+                            <p class="mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="birth-chart" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                     <p class="text-center mb-6 text-gray-600">Biểu đồ ngày sinh tiết lộ những tiềm năng bẩm sinh. Các con số hiện diện là nguồn lực, các mũi tên là sức mạnh vượt trội, và các con số trống là bài học cần tích hợp.</p>
+                    <div class="flex flex-col md:flex-row gap-8 items-start justify-center">
+                        <div class="flex-shrink-0 mx-auto">
+                            <div id="birth-chart-grid" class="birth-chart-grid mx-auto relative"></div>
+                            <div class="mt-4 text-center">
+                                <p class="font-semibold">Mũi Tên Sức Mạnh:</p>
+                                <div class="flex justify-center gap-4 mt-2">
+                                    <button data-arrow="1-4-7" class="arrow-toggle px-3 py-1 bg-gray-200 rounded-full text-sm">Thực Tế</button>
+                                    <button data-arrow="1-5-9" class="arrow-toggle px-3 py-1 bg-gray-200 rounded-full text-sm">Quyết Tâm</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="birth-chart-details" class="flex-grow p-4 bg-[#FDFBF5] rounded-lg border border-gray-200 min-h-[300px]">
+                            <h3 class="font-bold text-lg text-[#81B29A]">Khám phá biểu đồ</h3>
+                            <p class="mt-2 text-gray-600">Di chuột hoặc nhấp vào một con số để xem ý nghĩa của nó, hoặc nhấp vào các nút Mũi Tên Sức Mạnh để xem luận giải.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="journey" class="content-section">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <p class="text-center mb-6 text-gray-600">Cuộc đời được chia thành 4 đỉnh cao, mỗi đỉnh cao là một chu kỳ 9 năm mang đến những bài học và cơ hội riêng. Biểu đồ bên dưới thể hiện sự thay đổi năng lượng qua các giai đoạn này.</p>
+                     <div class="chart-container mx-auto">
+                        <canvas id="pinnaclesChart"></canvas>
+                    </div>
+                    <div id="pinnacles-timeline" class="mt-8 flex justify-between relative"></div>
+                    <div id="pinnacle-details" class="mt-6 p-4 bg-[#FDFBF5] rounded-lg border border-gray-200 min-h-[150px]">
+                         <p class="text-center text-gray-500">Nhấp vào một đỉnh cao trên dòng thời gian để xem chi tiết.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="synthesis" class="content-section">
+                 <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <p class="text-center mb-6 text-gray-600">Phần này đan kết tất cả các yếu tố lại với nhau, soi chiếu mối liên hệ sâu sắc giữa các con số, thiền định và lối sống tỉnh thức của anh, cùng những gợi ý cho hành trình phía trước.</p>
+                    <div id="accordion-container" class="space-y-4"></div>
+                 </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>Báo cáo được tạo dựa trên thông tin do Phan Ngọc Thắng cung cấp.</p>
+            <p>Đây là một công cụ tham khảo và chiêm nghiệm, không mang tính quyết định số phận.</p>
+        </footer>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const data = {
+        coreNumbers: [
+            { id: 'lifepath', number: 1, title: 'Đường Đời', keyword: 'Người Tiên Phong', description: 'Con đường của sự độc lập, tự chủ và lãnh đạo. Anh có ý chí mạnh mẽ để tự mình khai phá lối đi riêng. Thách thức lớn nhất trên con đường tâm linh chính là bản ngã, và mỗi giờ thiền là một cuộc đối mặt trực diện với thách thức này.' },
+            { id: 'destiny', number: 11, title: 'Sứ Mệnh', keyword: 'Sứ Giả Tâm Linh', description: 'Là một Con số Vua, sứ mệnh của anh là trở thành cầu nối giữa thế giới tâm linh và vật chất, truyền cảm hứng bằng trực giác và lòng trắc ẩn. Có sự giằng co giữa việc "đi một mình" (Đường Đời 1) và "dẫn dắt tập thể" (Sứ Mệnh 11).' },
+            { id: 'soul', number: 8, title: 'Linh Hồn', keyword: 'Người Làm Chủ', description: 'Linh hồn anh khao khát quyền lực, thành tựu và sự vững chắc. Lối sống kỷ luật của anh đang chuyển hóa những khái niệm này: "quyền lực" trở thành sự làm chủ nội tâm, và "thịnh vượng" là sự giàu có về bình an. Đây là nguồn năng lượng vô tận cho việc thực hành.' },
+            { id: 'personality', number: 3, title: 'Nhân Cách', keyword: 'Người Giao Tiếp', description: 'Vẻ ngoài của anh toát lên sự vui vẻ, sáng tạo và hòa đồng. Đây là công cụ quan trọng cho Sứ mệnh 11, giúp anh chia sẻ những chân lý sâu sắc một cách nhẹ nhàng, truyền cảm hứng, thay vì khô khan, học thuật.' }
+        ],
+        birthChart: {
+            grid: [
+                { pos: [0, 2], number: 9, count: 2 },
+                { pos: [1, 0], number: 2, count: 1 },
+                { pos: [1, 1], number: 5, count: 1 },
+                { pos: [2, 0], number: 1, count: 1 },
+                { pos: [2, 1], number: 4, count: 1 },
+                { pos: [2, 2], number: 7, count: 1 }
+            ],
+            numbers: {
+                '1': 'Củng cố Đường đời 1, cho thấy sự độc lập và cái tôi cân bằng.',
+                '2': 'Sự nhạy cảm và trực giác, hỗ trợ cho Sứ mệnh 11.',
+                '4': 'Con số của kỷ luật, trật tự và sự chăm chỉ, phản ánh lối sống của anh.',
+                '5': 'Nằm ở trung tâm, đại diện cho sự kết nối, tình yêu thương và tự do.',
+                '7': 'Con số của người tìm kiếm chân lý, của sự chiêm nghiệm và học hỏi qua trải nghiệm.',
+                '9': 'Hai số 9 cho thấy một lý tưởng và hoài bão rất lớn, mong muốn cống hiến cho nhân loại.'
+            },
+            arrows: {
+                '1-4-7': { name: 'Thực Tế', description: 'Nền tảng vững chắc, thực tế, tháo vát. Anh có khả năng biến việc thực hành tâm linh thành một phần hữu hình, nhất quán trong cuộc sống.', cells: ['2-0', '2-1', '2-2'] },
+                '1-5-9': { name: 'Quyết Tâm', description: 'Ý chí phi thường, kiên trì theo đuổi mục tiêu đến cùng. Đây là nguồn sức mạnh để duy trì một chế độ nghiêm ngặt trong nhiều năm.', cells: ['2-0', '1-1', '0-2'] }
+            },
+            missing: 'Các số trống (3, 6, 8) tạo ra một xu hướng tự nhiên hướng về đời sống nội tâm. Việc thiền định chính là phương pháp hoàn hảo để "lấp đầy" những khoảng trống này một cách có ý thức: nuôi dưỡng niềm vui nội tại (3), phát triển lòng từ bi (6), và xây dựng sự làm chủ nội tâm (8).'
+        },
+        pinnacles: [
+            { age: 35, number: 5, title: 'Tự Do & Thay Đổi', description: 'Giai đoạn của sự giải thoát khỏi những cấu trúc cũ. Đối với anh, nó có thể biểu hiện như một "sự tự do tâm linh"—một bước đột phá trong thực hành. Thách thức là cân bằng năng lượng mở rộng này với kỷ luật.' },
+            { age: 44, number: 3, title: 'Sáng Tạo & Biểu Đạt', description: 'Sau thời gian dài làm việc nội tâm, con đường của anh sẽ hướng ra ngoài. Đây là lúc Sứ mệnh 11 và Nhân cách 3 tỏa sáng, kêu gọi anh giảng dạy, viết lách, hoặc chia sẻ trí tuệ một cách sáng tạo.' },
+            { age: 53, number: 8, title: 'Làm Chủ & Thành Tựu', description: 'Đỉnh cao của sự thành thạo, nơi Linh hồn 8 tìm thấy biểu hiện tối thượng. Anh có thể trở thành một người thầy được kính trọng, nơi sự làm chủ nội tâm được công nhận trong thế giới bên ngoài.' },
+            { age: 62, number: 3, title: 'Chia Sẻ Trí Tuệ An Vui', description: 'Giai đoạn vui vẻ chia sẻ trí tuệ đã tích lũy. Công việc đã hoàn thành, và bây giờ là lúc để tỏa ra niềm vui và cảm hứng, hoàn thành Sứ mệnh 11 một cách nhẹ nhàng.' }
+        ],
+        synthesis: [
+            { title: 'Sự Cộng Hưởng Hoàn Hảo: Khi Lối Sống Phản Chiếu Vận Mệnh', content: 'Biểu đồ số học của anh là một sự lý giải sâu sắc cho lối sống anh đã chọn. Đường đời 1 (tiên phong), Mũi tên Quyết tâm (1-5-9), cùng số 7 (người tìm kiếm) và số 4 (kỷ luật) đều chỉ ra một người được trang bị độc đáo cho một con đường tâm linh nghiêm ngặt, tự định hướng. Việc thực hành của anh chính là phòng thí nghiệm của người tiên phong tâm linh (1), người tìm kiếm hướng nội (7), và sứ giả trực giác (11).' },
+            { title: 'Mâu Thuẫn Nội Tại & Con Đường Chuyển Hóa', content: 'Động lực cốt lõi là sự căng thẳng sáng tạo giữa khát vọng quyền lực của Linh hồn 8 và lối sống khổ hạnh. Mục tiêu không phải là đàn áp, mà là chuyển hóa nó: chuyển hướng động lực của số 8 khỏi vật chất để hướng tới trí tuệ và bình an. Sự thành công của quá trình này là chìa khóa để mở khóa tiềm năng của Sứ mệnh 11, cung cấp một quyền lực nội tại không thể lay chuyển.' },
+            { title: 'Gợi Ý Cho Hành Trình Phía Trước', content: '<ul><li class="mb-2"><strong>Đón Nhận Vai Trò Sứ Giả:</strong> Bắt đầu tìm cách thể hiện những hiểu biết của mình, dù nhỏ, để chuẩn bị cho các đỉnh cao sắp tới.</li><li class="mb-2"><strong>Điều Hướng Đỉnh Cao Số 5 (35 tuổi):</strong> Cởi mở với sự thay đổi và trải nghiệm mới. Hãy dùng sự ổn định từ thiền định làm mỏ neo.</li><li class="mb-2"><strong>Tiếp Tục Thuật Giả Kim Của Số 8:</strong> Có ý thức tiếp tục tái định nghĩa "quyền lực" là sự tự chủ và "thịnh vượng" là sự giàu có nội tại.</li><li class="mb-2"><strong>Nuôi Dưỡng Sự Biểu Đạt Vui Vẻ:</strong> Tạo không gian cho niềm vui và sự nhẹ nhàng (cân bằng số 3 bị thiếu) để làm cho thông điệp của anh dễ tiếp cận hơn.</li></ul>' }
+        ]
+    };
+
+    const navCards = document.querySelectorAll('.nav-card');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    navCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const targetId = card.dataset.target;
+
+            navCards.forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+
+            contentSections.forEach(section => {
+                if (section.id === targetId) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+        });
+    });
+    
+    function initOverview() {
+        const grid = document.getElementById('core-numbers-grid');
+        const detailsPanel = document.getElementById('core-number-details');
+        const detailsTitle = detailsPanel.querySelector('h3');
+        const detailsDesc = detailsPanel.querySelector('p');
+
+        data.coreNumbers.forEach((num, index) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 rounded-lg border-2 border-gray-200 cursor-pointer transition-all duration-300 hover:border-[#E07A5F] hover:bg-opacity-50';
+            card.innerHTML = `
+                <div class="flex items-center">
+                    <span class="text-3xl font-bold text-[#E07A5F] mr-3">${num.number}</span>
+                    <div>
+                        <h4 class="font-semibold">${num.title}</h4>
+                        <p class="text-sm text-gray-500">${num.keyword}</p>
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                document.querySelectorAll('#core-numbers-grid > div').forEach(c => c.classList.remove('bg-[#F9EAE4]', 'border-[#E07A5F]'));
+                card.classList.add('bg-[#F9EAE4]', 'border-[#E07A5F]');
+                detailsTitle.textContent = `${num.title} - Số ${num.number}`;
+                detailsDesc.textContent = num.description;
+            });
+            grid.appendChild(card);
+            if (index === 0) card.click();
+        });
+    }
+
+    function initBirthChart() {
+        const grid = document.getElementById('birth-chart-grid');
+        const detailsPanel = document.getElementById('birth-chart-details');
+        const cells = {};
+
+        for(let r=0; r<3; r++) {
+            for(let c=0; c<3; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'birth-chart-cell';
+                cell.dataset.pos = `${r}-${c}`;
+                grid.appendChild(cell);
+                cells[`${r}-${c}`] = cell;
+            }
+        }
+        
+        data.birthChart.grid.forEach(item => {
+            const cell = cells[`${item.pos[0]}-${item.pos[1]}`];
+            cell.textContent = item.count > 1 ? `${item.number}, ${item.number}` : item.number;
+            cell.dataset.number = item.number;
+            cell.addEventListener('mouseover', () => {
+                detailsPanel.innerHTML = `<h3 class="font-bold text-lg text-[#81B29A]">Số ${item.number}</h3><p class="mt-2">${data.birthChart.numbers[item.number]}</p>`;
+            });
+        });
+        
+        const arrowToggles = document.querySelectorAll('.arrow-toggle');
+        arrowToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const arrowKey = toggle.dataset.arrow;
+                const arrowData = data.birthChart.arrows[arrowKey];
+                
+                document.querySelectorAll('.birth-chart-cell').forEach(c => c.classList.remove('highlight'));
+                arrowData.cells.forEach(pos => {
+                    cells[pos].classList.add('highlight');
+                });
+                
+                detailsPanel.innerHTML = `<h3 class="font-bold text-lg text-[#E07A5F]">Mũi Tên ${arrowData.name}</h3><p class="mt-2">${arrowData.description}</p>`;
+            });
+        });
+    }
+
+    function initJourney() {
+        const ctx = document.getElementById('pinnaclesChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.pinnacles.map(p => `${p.age} tuổi`),
+                datasets: [{
+                    label: 'Năng Lượng Đỉnh Cao',
+                    data: data.pinnacles.map(p => p.number),
+                    borderColor: '#E07A5F',
+                    backgroundColor: '#F9EAE4',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += `Số ${context.parsed.y}`;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const timeline = document.getElementById('pinnacles-timeline');
+        const detailsPanel = document.getElementById('pinnacle-details');
+        
+        timeline.innerHTML = '<div class="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 -translate-y-1/2"></div>';
+
+        data.pinnacles.forEach((p, index) => {
+            const point = document.createElement('div');
+            point.className = 'relative z-10 w-10 h-10 bg-white border-2 border-[#81B29A] rounded-full flex items-center justify-center cursor-pointer flex-col text-sm';
+            point.innerHTML = `<span class="font-bold">${p.age}t</span>`;
+            point.addEventListener('click', () => {
+                detailsPanel.innerHTML = `<h3 class="font-bold text-lg text-[#81B29A]">Đỉnh Cao ${index + 1} (${p.age} tuổi) - Số ${p.number}: ${p.title}</h3><p class="mt-2">${p.description}</p>`;
+                document.querySelectorAll('#pinnacles-timeline > div.relative').forEach(pt => {
+                    pt.classList.remove('bg-[#D4E2D4]', 'border-[#3D405B]');
+                });
+                point.classList.add('bg-[#D4E2D4]', 'border-[#3D405B]');
+            });
+            timeline.appendChild(point);
+        });
+    }
+    
+    function initSynthesis() {
+        const container = document.getElementById('accordion-container');
+        data.synthesis.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'border border-gray-200 rounded-lg';
+            div.innerHTML = `
+                <button class="accordion-header w-full p-4 text-left font-semibold flex justify-between items-center transition-colors duration-300 hover:bg-gray-50">
+                    <span>${item.title}</span>
+                    <span class="transform transition-transform duration-300 text-[#81B29A]">&#9662;</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="p-4 pt-0 text-gray-700">${item.content}</div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        container.addEventListener('click', (e) => {
+            const header = e.target.closest('.accordion-header');
+            if (!header) return;
+
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('span:last-child');
+            const isOpen = content.style.maxHeight;
+
+            document.querySelectorAll('.accordion-content').forEach(c => c.style.maxHeight = null);
+            document.querySelectorAll('.accordion-header span:last-child').forEach(i => i.style.transform = '');
+
+            if (!isOpen) {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                icon.style.transform = 'rotate(180deg)';
+            }
+        });
+    }
+
+    initOverview();
+    initBirthChart();
+    initJourney();
+    initSynthesis();
+});
+</script>
+</body>
+</html>
